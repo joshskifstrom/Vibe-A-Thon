@@ -1,14 +1,26 @@
 {
-  "description": "Lost/Stolen Card Reporting — Twilio Studio Flow",
+  "description": "Lost/Stolen Card Reporting — Twilio Studio Flow with Conversation Intelligence",
   "states": [
     {
       "name": "Trigger",
       "type": "trigger",
       "transitions": [
-        { "next": "say_greeting", "event": "incomingCall" },
-        { "next": "say_greeting", "event": "incomingRequest" }
+        { "next": "start_intelligence", "event": "incomingCall" },
+        { "next": "start_intelligence", "event": "incomingRequest" }
       ],
       "properties": {}
+    },
+    {
+      "name": "start_intelligence",
+      "type": "start-call-recording",
+      "transitions": [
+        { "next": "say_greeting", "event": "next" }
+      ],
+      "properties": {
+        "voiceIntelligenceService": "{{VOICE_INTELLIGENCE_SERVICE_SID}}",
+        "trim": "do-not-trim",
+        "recordingStatusCallbackUrl": "{{LAMBDA_URL}}/intelligence-webhook"
+      }
     },
     {
       "name": "say_greeting",
@@ -209,6 +221,20 @@
         "from": "{{trigger.call.To}}",
         "say_on_connect": "",
         "record": false
+      }
+    },
+    {
+      "name": "intelligence_early_exit",
+      "type": "make-http-request",
+      "transitions": [
+        { "next": "say_success",   "event": "success" },
+        { "next": "connect_agent", "event": "failed" }
+      ],
+      "properties": {
+        "method": "POST",
+        "content_type": "application/json",
+        "url": "{{LAMBDA_URL}}",
+        "body": "{\"intent\": \"{{widgets.intelligence_early_exit.inbound.intent}}\", \"callSid\": \"{{trigger.call.CallSid}}\", \"source\": \"conversation_intelligence\", \"attempt\": \"1\"}"
       }
     },
     {

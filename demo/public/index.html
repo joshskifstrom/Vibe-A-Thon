@@ -12,6 +12,7 @@
   --red:#FF4D4D; --red-dim:rgba(255,77,77,.1);
   --orange:#FF9900; --orange-dim:rgba(255,153,0,.1);
   --yellow:#F59E0B;
+  --purple:#8B5CF6; --purple-dim:rgba(139,92,246,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -24,6 +25,7 @@ header{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var
 .tabs{display:flex;gap:4px;margin-left:16px}
 .tab{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s}
 .tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.tab.active.intel{background:var(--purple);border-color:var(--purple)}
 .hstats{margin-left:auto;display:flex;gap:16px}
 .hstat{text-align:center}
 .hstat-val{font-size:20px;font-weight:800;color:var(--green)}
@@ -49,6 +51,18 @@ main{display:grid;grid-template-columns:220px 1fr 220px;gap:12px;padding:12px;fl
 .ctimer{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .transcript{font-size:10.5px;line-height:1.6;min-height:50px;overflow-y:auto}
 .ivr-line{color:#60A5FA}.dtmf-line{color:var(--yellow)}.sys-line{color:var(--muted)}
+.caller-line{color:#E2E8F0;font-style:italic}
+.intent-badge{display:inline-flex;align-items:center;gap:5px;background:var(--purple);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;margin-top:4px;letter-spacing:.3px}
+#node-intelligence{border-color:var(--purple);opacity:.3}
+#node-intelligence.active{border-color:var(--purple);background:var(--purple-dim);animation:ipulse 1.5s infinite;opacity:1}
+#node-intelligence.active .lbl{color:var(--purple)}
+#node-intelligence.active .sdot{background:var(--purple)}
+#node-intelligence.success{border-color:var(--purple);background:var(--purple-dim);opacity:1}
+#node-intelligence.success .lbl{color:var(--purple)}
+#node-intelligence.success .sdot{background:var(--purple)}
+.skip-badge{font-size:9px;color:var(--muted);text-decoration:line-through;opacity:.5;margin-left:4px}
+#intent-flash{position:fixed;top:30%;left:50%;transform:translate(-50%,-50%);background:var(--purple);color:#fff;font-size:13px;font-weight:800;padding:14px 28px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:101;text-align:center;letter-spacing:.3px}
+@keyframes ipulse{0%{box-shadow:0 0 0 0 rgba(139,92,246,.4)}70%{box-shadow:0 0 0 8px rgba(139,92,246,0)}100%{box-shadow:0 0 0 0 rgba(139,92,246,0)}}
 .kpad{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px}
 .key{background:#0F1218;border:1px solid var(--border);border-radius:7px;padding:7px 0;text-align:center;font-size:13px;font-weight:600;transition:all .15s;color:var(--text)}
 .key.pressed{background:var(--blue-dim);border-color:var(--blue);color:var(--blue);transform:scale(.93)}
@@ -133,6 +147,7 @@ main{display:grid;grid-template-columns:220px 1fr 220px;gap:12px;padding:12px;fl
   <div class="tabs">
     <button class="tab active" data-s="happy">Happy Path</button>
     <button class="tab" data-s="handoff">Warm Handoff</button>
+    <button class="tab intel" data-s="intelligence">⚡ Intelligent IVR</button>
   </div>
   <div class="hstats">
     <div class="hstat"><div class="hstat-val" id="h-deflected">0</div><div class="hstat-lbl">Deflected</div></div>
@@ -172,6 +187,15 @@ main{display:grid;grid-template-columns:220px 1fr 220px;gap:12px;padding:12px;fl
       <div class="fnode" id="node-caller"><span class="icon">📞</span><div class="info"><div class="lbl">Caller</div><div class="msg" id="m-caller">Waiting…</div></div><div class="sdot"></div></div>
       <div class="farrow" id="a1"></div>
       <div class="fnode" id="node-twilio"><span class="icon">🔵</span><div class="info"><div class="lbl">Twilio Studio</div><div class="msg" id="m-twilio">Idle</div></div><div class="sdot"></div></div>
+      <div class="farrow" id="a-intel"></div>
+      <div class="fnode" id="node-intelligence" style="opacity:.3;border-color:var(--purple)">
+        <span class="icon">🧠</span>
+        <div class="info">
+          <div class="lbl" style="color:var(--purple)">Conversation Intelligence <small id="intel-skip" class="skip-badge"></small></div>
+          <div class="msg" id="m-intelligence">Language Operators on standby</div>
+        </div>
+        <div class="sdot"></div>
+      </div>
       <div class="farrow" id="a2"></div>
       <div class="fnode" id="node-gateway"><span class="icon">🟠</span><div class="info"><div class="lbl">API Gateway</div><div class="msg" id="m-gateway">Idle</div></div><div class="sdot"></div></div>
       <div class="farrow" id="a3"></div>
@@ -234,6 +258,7 @@ main{display:grid;grid-template-columns:220px 1fr 220px;gap:12px;padding:12px;fl
 </div>
 
 <div id="dtmf-flash"></div>
+<div id="intent-flash"></div>
 <div id="banner"></div>
 
 <script>
@@ -245,6 +270,8 @@ document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () =>
   document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
   t.classList.add("active");
   scenario = t.dataset.s;
+  // Purple start button for intelligence tab
+  document.getElementById("start-btn").style.background = scenario === "intelligence" ? "var(--purple)" : "var(--blue)";
 }));
 
 function startDemo() {
@@ -257,7 +284,7 @@ function startDemo() {
 }
 
 function handle(ev) {
-  const arrows = { twilio:"a1", gateway:"a2", lambda:"a3", dynamo:"a4", secrets:"a4", backend:"a5", connect:"a6" };
+  const arrows = { twilio:"a1", intelligence:"a-intel", gateway:"a2", lambda:"a3", dynamo:"a4", secrets:"a4", backend:"a5", connect:"a6" };
   switch(ev.type) {
     case "call_start":
       setDot("ringing", "Incoming Call");
@@ -274,6 +301,11 @@ function handle(ev) {
     case "dtmf":    flashKey(ev.digit); addLine("dtmf-line", `Pressed: ${ev.digit}`); break;
     case "security": log(ev.level, ev.message); break;
     case "agent":   setAgent(ev.agent, ev.status, ev.message); break;
+    case "caller_word": appendCallerWord(ev.word, ev.final); break;
+    case "intent_detected": flashIntent(ev.intent, ev.confidence); break;
+    case "skip_menu":
+      document.getElementById("intel-skip").textContent = "main menu skipped";
+      log("INFO", "Main menu DTMF gather bypassed — intent already known"); break;
     case "deflected":
       fetch("/stats/deflected", {method:"POST"}).then(r=>r.json()).then(updateStats);
       showBanner("deflected", "✓ Call Deflected — Connect Not Reached"); break;
@@ -286,8 +318,37 @@ function handle(ev) {
   }
 }
 
+let callerSpeechEl = null;
+function appendCallerWord(word, final) {
+  const t = document.getElementById("transcript");
+  if (t.querySelector("span")) t.innerHTML = "";
+  if (!callerSpeechEl) {
+    callerSpeechEl = document.createElement("div");
+    callerSpeechEl.className = "caller-line fu";
+    callerSpeechEl.textContent = "Caller: ";
+    t.appendChild(callerSpeechEl);
+  }
+  callerSpeechEl.textContent += word + " ";
+  if (final) callerSpeechEl = null;
+  t.scrollTop = t.scrollHeight;
+}
+function flashIntent(intent, conf) {
+  const f = document.getElementById("intent-flash");
+  f.innerHTML = `⚡ INTENT DETECTED<br><span style="font-size:16px">${intent}</span><br><span style="font-size:11px;opacity:.8">confidence: ${conf}</span>`;
+  f.style.opacity = "1";
+  setTimeout(() => f.style.opacity = "0", 2200);
+  const badge = document.createElement("div");
+  badge.className = "intent-badge fu";
+  badge.textContent = `⚡ ${intent.toUpperCase()}  ${conf}`;
+  document.getElementById("transcript").appendChild(badge);
+}
 function setNode(id, status, msg) {
   const el = document.getElementById("node-"+id); if(!el) return;
+  if (id === "intelligence") {
+    el.style.opacity = "1";
+    el.className = "fnode " + status;
+    return;
+  }
   // preserve connect orange styling
   if (id === "connect") {
     el.style.opacity = "1";
@@ -349,6 +410,12 @@ function startTimer() {
 function stopTimer() { clearInterval(timerInt); }
 function resetAll() {
   ["caller","twilio","gateway","lambda","dynamo","secrets","backend"].forEach(id => setNode(id,"","Idle"));
+  const intel = document.getElementById("node-intelligence");
+  intel.className = "fnode"; intel.style.opacity = ".3";
+  document.getElementById("m-intelligence").textContent = "Language Operators on standby";
+  document.getElementById("intel-skip").textContent = "";
+  document.getElementById("a-intel")?.classList.remove("lit");
+  callerSpeechEl = null;
   const c = document.getElementById("node-connect");
   c.className = "fnode"; c.style.opacity = ".3"; c.style.borderColor = "var(--orange)";
   c.querySelector(".lbl").style.color = "var(--orange)";

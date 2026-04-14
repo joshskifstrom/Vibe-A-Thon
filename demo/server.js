@@ -1,8 +1,9 @@
 import express from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { getHappyPathScript }  from "./scenarios/happyPath.mjs";
-import { getWarmHandoffScript } from "./scenarios/warmHandoff.mjs";
+import { getHappyPathScript }     from "./scenarios/happyPath.mjs";
+import { getWarmHandoffScript }   from "./scenarios/warmHandoff.mjs";
+import { getIntelligentFlowScript } from "./scenarios/intelligentFlow.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app  = express();
@@ -41,6 +42,8 @@ app.get("/demo/stream", (req, res) => {
 
   if (scenario === "handoff") {
     sseStream(res, getWarmHandoffScript());
+  } else if (scenario === "intelligence") {
+    sseStream(res, getIntelligentFlowScript());
   } else {
     sseStream(res, getHappyPathScript());
   }

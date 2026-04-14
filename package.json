@@ -1,0 +1,17 @@
+{
+  "type": "module",
+  "scripts": {
+    "init": "node agents.mjs --init",
+    "start": "node agents.mjs",
+    "demo": "node demo/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1030.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "description": "Lost/Stolen Card Reporting — Twilio Studio Flow",
+  "states": [
+    {
+      "name": "Trigger",
+      "type": "trigger",
+      "transitions": [
+        { "next": "say_greeting", "event": "incomingCall" },
+        { "next": "say_greeting", "event": "incomingRequest" }
+      ],
+      "properties": {}
+    },
+    {
+      "name": "say_greeting",
+      "type": "say-play",
+      "transitions": [
+        { "next": "gather_intent", "event": "audioComplete" }
+      ],
+      "properties": {
+        "say": "Welcome to card services. To report a lost or stolen card, press 1. For card activation, press 2. To speak with an agent, say Agent at any time.",
+        "voice": "Polly.Joanna",
+        "language": "en-US",
+        "loop": 1
+      }
+    },
+    {
+      "name": "gather_intent",
+      "type": "gather-input-on-call",
+      "transitions": [
+        { "next": "route_intent",    "event": "keypress" },
+        { "next": "gather_speech",   "event": "speech" },
+        { "next": "say_no_input",    "event": "timeout" }
+      ],
+      "properties": {
+        "say": "",
+        "voice": "Polly.Joanna",
+        "language": "en-US",
+        "timeout": 5,
+        "num_digits": 1,
+        "speech_timeout": "auto",
+        "speech_model": "phone_call",
+        "hints": "agent, representative, lost, stolen, activate"
+      }
+    },
+    {
+      "name": "gather_speech",
+      "type": "set-variables",
+      "transitions": [
+        { "next": "http_intent", "event": "next" }
+      ],
+      "properties": {
+        "variables": [
+          { "key": "intent_source", "value": "speech" },
+          { "key": "speech_result", "value": "{{widgets.gather_intent.SpeechResult}}" }
+        ]
+      }
+    },
+    {
+      "name": "route_intent",
+      "type": "split-based-on",
+      "transitions": [
+        { "next": "http_intent",   "event": "match",    "conditions": [{ "type": "equal_to", "value": "1", "friendly_name": "Lost/Stolen" }] },
+        { "next": "http_intent",   "event": "match",    "conditions": [{ "type": "equal_to", "value": "2", "friendly_name": "Card Activation" }] },
+        { "next": "say_greeting",  "event": "noMatch" }
+      ],
+      "properties": {
+        "input": "{{widgets.gather_intent.Digits}}"
+      }
+    },
+    {
+      "name": "http_intent",
+      "type": "make-http-request",
+      "transitions": [
+        { "next": "check_auth_result", "event": "success" },
+        { "next": "say_error",         "event": "failed" }
+      ],
+      "properties": {
+        "method": "POST",
+        "content_type": "application/json",
+        "url": "{{LAMBDA_URL}}",
+        "body": "{\"intent\": \"{{widgets.gather_intent.Digits}}\", \"callSid\": \"{{trigger.call.CallSid}}\", \"attempt\": \"1\"}",
+        "parameters": [
+          { "key": "AccountSid", "value": "{{ACCOUNT_SID}}" }
+        ]
+      }
+    },
+    {
+      "name": "check_auth_result",
+      "type": "split-based-on",
+      "transitions": [
+        { "next": "say_success",      "event": "match",   "conditions": [{ "type": "equal_to", "value": "success", "friendly_name": "Auth Success" }] },
+        { "next": "say_auth_failed",  "event": "noMatch" }
+      ],
+      "properties": {
+        "input": "{{widgets.http_intent.parsed.auth_status}}"
+      }
+    },
+    {
+      "name": "say_success",
+      "type": "say-play",
+      "transitions": [
+        { "next": "hangup", "event": "audioComplete" }
+      ],
+      "properties": {
+        "say": "{{widgets.http_intent.parsed.message}}",
+        "voice": "Polly.Joanna",
+        "language": "en-US"
+      }
+    },
+    {
+      "name": "say_auth_failed",
+      "type": "say-play",
+      "transitions": [
+        { "next": "gather_retry", "event": "audioComplete" }
+      ],
+      "properties": {
+        "say": "I'm sorry, I could not verify your card details. Please try again.",
+        "voice": "Polly.Joanna",
+        "language": "en-US"
+      }
+    },
+    {
+      "name": "gather_retry",
+      "type": "gather-input-on-call",
+      "transitions": [
+        { "next": "http_retry",      "event": "keypress" },
+        { "next": "connect_agent",   "event": "timeout" }
+      ],
+      "properties": {
+        "say": "Please enter your card details again, or stay on the line to speak with an agent.",
+        "voice": "Polly.Joanna",
+        "language": "en-US",
+        "timeout": 5,
+        "num_digits": 4
+      }
+    },
+    {
+      "name": "http_retry",
+      "type": "make-http-request",
+      "transitions": [
+        { "next": "check_retry_result", "event": "success" },
+        { "next": "connect_agent",      "event": "failed" }
+      ],
+      "properties": {
+        "method": "POST",
+        "content_type": "application/json",
+        "url": "{{LAMBDA_URL}}",
+        "body": "{\"intent\": \"{{widgets.gather_intent.Digits}}\", \"callSid\": \"{{trigger.call.CallSid}}\", \"attempt\": \"2\"}"
+      }
+    },
+    {
+      "name": "check_retry_result",
+      "type": "split-based-on",
+      "transitions": [
+        { "next": "say_success",   "event": "match",   "conditions": [{ "type": "equal_to", "value": "success", "friendly_name": "Auth Success" }] },
+        { "next": "connect_agent", "event": "noMatch" }
+      ],
+      "properties": {
+        "input": "{{widgets.http_retry.parsed.auth_status}}"
+      }
+    },
+    {
+      "name": "say_no_input",
+      "type": "say-play",
+      "transitions": [
+        { "next": "connect_agent", "event": "audioComplete" }
+      ],
+      "properties": {
+        "say": "We did not receive your input. Transferring you to an agent.",
+        "voice": "Polly.Joanna",
+        "language": "en-US"
+      }
+    },
+    {
+      "name": "say_error",
+      "type": "say-play",
+      "transitions": [
+        { "next": "connect_agent", "event": "audioComplete" }
+      ],
+      "properties": {
+        "say": "We are experiencing technical difficulties. Transferring you to an agent.",
+        "voice": "Polly.Joanna",
+        "language": "en-US"
+      }
+    },
+    {
+      "name": "connect_agent",
+      "type": "make-http-request",
+      "transitions": [
+        { "next": "dial_connect", "event": "success" },
+        { "next": "dial_connect", "event": "failed" }
+      ],
+      "properties": {
+        "method": "POST",
+        "content_type": "application/json",
+        "url": "{{LAMBDA_URL}}",
+        "body": "{\"intent\": \"warmHandoff\", \"callSid\": \"{{trigger.call.CallSid}}\", \"from\": \"{{trigger.call.From}}\"}"
+      }
+    },
+    {
+      "name": "dial_connect",
+      "type": "make-outgoing-connection",
+      "transitions": [
+        { "next": "hangup", "event": "callComplete" },
+        { "next": "hangup", "event": "callFailed" }
+      ],
+      "properties": {
+        "to": "{{CONNECT_INBOUND_NUMBER}}",
+        "from": "{{trigger.call.To}}",
+        "say_on_connect": "",
+        "record": false
+      }
+    },
+    {
+      "name": "hangup",
+      "type": "stop-call",
+      "transitions": [],
+      "properties": {}
+    }
+  ],
+  "initial_state": "Trigger",
+  "flags": {
+    "allow_concurrent_calls": true
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "Version": "2019-10-30",
+  "StartAction": "check-hours",
+  "Metadata": {
+    "entryPointPosition": { "x": 40, "y": 40 },
+    "ActionMetadata": {}
+  },
+  "Actions": [
+
+    {
+      "Parameters": { "Type": "BusinessHours", "BusinessHoursId": "arn:aws:connect:us-east-1:ACCOUNT_ID:instance/INSTANCE_ID/operating-hours/HOURS_ID" },
+      "Identifier": "check-hours",
+      "Type": "CheckHoursOfOperation",
+      "Transitions": {
+        "NextAction": "lookup-ivr-context",
+        "Errors": [{ "NextAction": "set-default-attributes", "ErrorType": "NoMatchingError" }],
+        "Conditions": [{ "NextAction": "lookup-ivr-context", "Condition": { "Operator": "Equals", "Operands": ["True"] } }]
+      }
+    },
+
+    {
+      "Parameters": {
+        "LambdaFunctionARN": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:ivr-context-lookup",
+        "InvocationTimeLimitSeconds": "3",
+        "LambdaInvocationAttributes": {
+          "callerPhone": "$.CustomerEndpoint.Address"
+        }
+      },
+      "Identifier": "lookup-ivr-context",
+      "Type": "InvokeLambdaFunction",
+      "Transitions": {
+        "NextAction": "set-ivr-attributes",
+        "Errors": [{ "NextAction": "set-default-attributes", "ErrorType": "NoMatchingError" }]
+      }
+    },
+
+    {
+      "Parameters": {
+        "Attributes": {
+          "ivr_intent":     "$.External.intent",
+          "ivr_summary":    "$.External.authSummary",
+          "ivr_call_sid":   "$.External.callSid",
+          "ivr_deflected":  "false",
+          "ivr_timestamp":  "$.External.timestamp"
+        }
+      },
+      "Identifier": "set-ivr-attributes",
+      "Type": "UpdateContactAttributes",
+      "Transitions": {
+        "NextAction": "say-agent-greeting",
+        "Errors": [{ "NextAction": "say-agent-greeting", "ErrorType": "NoMatchingError" }]
+      }
+    },
+
+    {
+      "Parameters": {
+        "Attributes": {
+          "ivr_intent":    "unknown",
+          "ivr_summary":   "direct_call",
+          "ivr_deflected": "false"
+        }
+      },
+      "Identifier": "set-default-attributes",
+      "Type": "UpdateContactAttributes",
+      "Transitions": {
+        "NextAction": "say-agent-greeting",
+        "Errors": [{ "NextAction": "say-agent-greeting", "ErrorType": "NoMatchingError" }]
+      }
+    },
+
+    {
+      "Parameters": {
+        "Text": "Thank you for holding. I'm connecting you now with an Intuit card services agent who has your information."
+      },
+      "Identifier": "say-agent-greeting",
+      "Type": "MessageParticipant",
+      "Transitions": {
+        "NextAction": "route-to-ibcc-queue",
+        "Errors": [{ "NextAction": "route-to-ibcc-queue", "ErrorType": "NoMatchingError" }]
+      }
+    },
+
+    {
+      "Parameters": {
+        "QueueId": "arn:aws:connect:us-east-1:ACCOUNT_ID:instance/INSTANCE_ID/queue/IBCC_QUEUE_ID"
+      },
+      "Identifier": "route-to-ibcc-queue",
+      "Type": "TransferToQueue",
+      "Transitions": {
+        "NextAction": "end-flow",
+        "Errors": [
+          { "NextAction": "end-flow", "ErrorType": "QueueAtCapacity" },
+          { "NextAction": "end-flow", "ErrorType": "NoMatchingError" }
+        ]
+      }
+    },
+
+    {
+      "Parameters": {},
+      "Identifier": "end-flow",
+      "Type": "DisconnectParticipant",
+      "Transitions": {}
+    }
+
+  ]
+}

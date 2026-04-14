@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Intuit | Secure IVR Demo</title>
+<style>
+:root {
+  --bg:#090C14; --panel:#111827; --border:#1F2937;
+  --text:#E2E8F0; --muted:#4B5563;
+  --blue:#0077C5; --blue-dim:rgba(0,119,197,.12);
+  --green:#00C896; --green-dim:rgba(0,200,150,.1);
+  --red:#FF4D4D; --red-dim:rgba(255,77,77,.1);
+  --orange:#FF9900; --orange-dim:rgba(255,153,0,.1);
+  --yellow:#F59E0B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* HEADER */
+header{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{font-size:20px;font-weight:800;color:#fff;letter-spacing:-.5px}.logo span{color:var(--blue)}
+.hdivider{width:1px;height:20px;background:var(--border)}
+.htitle{font-size:13px;color:var(--muted)}
+.tabs{display:flex;gap:4px;margin-left:16px}
+.tab{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s}
+.tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.hstats{margin-left:auto;display:flex;gap:16px}
+.hstat{text-align:center}
+.hstat-val{font-size:20px;font-weight:800;color:var(--green)}
+.hstat-lbl{font-size:10px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
+
+/* MAIN GRID */
+main{display:grid;grid-template-columns:220px 1fr 220px;gap:12px;padding:12px;flex:1;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;overflow:hidden}
+.panel-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;flex-shrink:0}
+
+/* PHONE */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1}
+.phone{width:170px;background:#0A0D14;border:2px solid var(--border);border-radius:26px;padding:10px}
+.notch{width:50px;height:6px;background:var(--border);border-radius:3px;margin:0 auto 8px}
+.screen{background:#070A10;border-radius:14px;min-height:140px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.call-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .3s;flex-shrink:0}
+.dot.ringing{background:var(--yellow);animation:blink .7s infinite}
+.dot.active{background:var(--green);animation:pdot 1.5s infinite}
+.dot.done{background:var(--green)}
+.dot.fail{background:var(--red)}
+.cid{font-size:12px;font-weight:600}
+.ctimer{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.transcript{font-size:10.5px;line-height:1.6;min-height:50px;overflow-y:auto}
+.ivr-line{color:#60A5FA}.dtmf-line{color:var(--yellow)}.sys-line{color:var(--muted)}
+.kpad{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px}
+.key{background:#0F1218;border:1px solid var(--border);border-radius:7px;padding:7px 0;text-align:center;font-size:13px;font-weight:600;transition:all .15s;color:var(--text)}
+.key.pressed{background:var(--blue-dim);border-color:var(--blue);color:var(--blue);transform:scale(.93)}
+#start-btn{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:opacity .2s;margin-top:auto}
+#start-btn:hover{opacity:.85}
+#start-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* FLOW */
+.flow-track{display:flex;flex-direction:column;align-items:center;flex:1;overflow-y:auto;gap:0}
+.fnode{width:100%;max-width:360px;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px;transition:all .3s;background:var(--bg)}
+.fnode .icon{font-size:16px;flex-shrink:0}
+.fnode .info{flex:1;min-width:0}
+.fnode .lbl{font-size:11px;font-weight:700;color:var(--muted)}
+.fnode .msg{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fnode .sdot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .3s}
+.fnode.active{border-color:var(--blue);background:var(--blue-dim);animation:npulse 1.5s infinite}
+.fnode.active .lbl{color:var(--blue)}.fnode.active .msg{color:#93C5FD}.fnode.active .sdot{background:var(--blue)}
+.fnode.success{border-color:var(--green);background:var(--green-dim)}
+.fnode.success .lbl{color:var(--green)}.fnode.success .msg{color:#6EE7B7}.fnode.success .sdot{background:var(--green)}
+.fnode.fail{border-color:var(--red);background:var(--red-dim)}
+.fnode.fail .lbl{color:var(--red)}.fnode.fail .msg{color:#FCA5A5}.fnode.fail .sdot{background:var(--red)}
+#node-connect.active{border-color:var(--orange);background:var(--orange-dim)}
+#node-connect.active .lbl{color:var(--orange)}.#node-connect.active .sdot{background:var(--orange)}
+#node-connect.success{border-color:var(--orange);background:var(--orange-dim)}
+#node-connect.success .lbl{color:var(--orange)}.#node-connect.success .sdot{background:var(--orange)}
+.farrow{width:2px;height:16px;background:var(--border);position:relative;transition:background .4s}
+.farrow.lit{background:var(--blue)}
+.farrow::after{content:"▾";position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--border);transition:color .4s}
+.farrow.lit::after{color:var(--blue)}
+.frow{display:flex;gap:8px;width:100%;max-width:360px}
+.frow .fnode{max-width:175px}
+
+/* AGENTS + STATS */
+.side-panel{display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+.acard{border:1.5px solid var(--border);border-radius:8px;padding:10px;transition:all .3s;flex-shrink:0}
+.acard.active{border-color:var(--blue);background:var(--blue-dim)}
+.acard.done{border-color:var(--green);background:var(--green-dim)}
+.ahead{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.arole{font-size:9px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:4px;background:var(--border);color:var(--muted);transition:all .3s}
+.acard.active .arole{background:var(--blue);color:#fff}
+.acard.done .arole{background:var(--green);color:#000}
+.aind{width:6px;height:6px;border-radius:50%;background:var(--muted);margin-left:auto;transition:background .3s}
+.acard.active .aind{background:var(--blue);animation:blink 1s infinite}
+.acard.done .aind{background:var(--green)}
+.amsg{font-size:10.5px;color:var(--muted);line-height:1.5;transition:color .3s}
+.acard.active .amsg{color:#93C5FD}.acard.done .amsg{color:#6EE7B7}
+.stats-box{margin-top:auto;border:1px solid var(--border);border-radius:8px;padding:12px;flex-shrink:0}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sitem{text-align:center}
+.sval{font-size:22px;font-weight:800;color:var(--green)}
+.slbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* LOG */
+.log-bar{flex-shrink:0;background:var(--panel);border-top:1px solid var(--border);padding:8px 16px}
+.log-head{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.lock{color:var(--green)}
+#log-entries{font-family:"SF Mono","Fira Code",monospace;font-size:10.5px;height:70px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.ll{display:flex;gap:8px}.lts{color:var(--muted);font-size:9px;flex-shrink:0}
+.lv-INFO{color:#60A5FA}.lv-REDACT{color:var(--yellow)}.lv-SUCCESS{color:var(--green)}
+.lmsg{color:#94A3B8}
+
+/* OVERLAYS */
+#dtmf-flash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--blue);color:#fff;font-size:56px;font-weight:900;width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s;z-index:100}
+#banner{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;padding:11px 24px;border-radius:24px;z-index:200;animation:slideup .4s ease}
+#banner.deflected{background:var(--green);color:#000}
+#banner.handoff{background:var(--orange);color:#000}
+
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes pdot{0%{transform:scale(1)}50%{transform:scale(1.5)}100%{transform:scale(1)}}
+@keyframes npulse{0%{box-shadow:0 0 0 0 rgba(0,119,197,.35)}70%{box-shadow:0 0 0 8px rgba(0,119,197,0)}100%{box-shadow:0 0 0 0 rgba(0,119,197,0)}}
+@keyframes fadeup{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideup{from{transform:translateX(-50%) translateY(16px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.fu{animation:fadeup .25s ease forwards}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">in<span>tu</span>it</div>
+  <div class="hdivider"></div>
+  <span class="htitle">AI-Powered Card Services IVR</span>
+  <div class="tabs">
+    <button class="tab active" data-s="happy">Happy Path</button>
+    <button class="tab" data-s="handoff">Warm Handoff</button>
+  </div>
+  <div class="hstats">
+    <div class="hstat"><div class="hstat-val" id="h-deflected">0</div><div class="hstat-lbl">Deflected</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-handoffs" style="color:var(--orange)">0</div><div class="hstat-lbl">Handoffs</div></div>
+  </div>
+</header>
+
+<main>
+  <!-- PHONE -->
+  <div class="panel">
+    <div class="panel-title">Caller Experience</div>
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="call-badge"><div class="dot" id="dot"></div><span id="clabel">Ready</span></div>
+          <div class="cid" id="cid">+1 (512) 867-5309</div>
+          <div class="ctimer" id="ctimer">─</div>
+          <div class="transcript" id="transcript"><span class="sys-line">Select a scenario and press Start.</span></div>
+        </div>
+        <div class="kpad">
+          <div class="key" id="key-1">1</div><div class="key">2</div><div class="key">3</div>
+          <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+          <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+          <div class="key">*</div><div class="key">0</div><div class="key">#</div>
+        </div>
+      </div>
+      <button id="start-btn" onclick="startDemo()">▶ Start Demo</button>
+    </div>
+  </div>
+
+  <!-- FLOW -->
+  <div class="panel">
+    <div class="panel-title">System Flow</div>
+    <div class="flow-track">
+
+      <div class="fnode" id="node-caller"><span class="icon">📞</span><div class="info"><div class="lbl">Caller</div><div class="msg" id="m-caller">Waiting…</div></div><div class="sdot"></div></div>
+      <div class="farrow" id="a1"></div>
+      <div class="fnode" id="node-twilio"><span class="icon">🔵</span><div class="info"><div class="lbl">Twilio Studio</div><div class="msg" id="m-twilio">Idle</div></div><div class="sdot"></div></div>
+      <div class="farrow" id="a2"></div>
+      <div class="fnode" id="node-gateway"><span class="icon">🟠</span><div class="info"><div class="lbl">API Gateway</div><div class="msg" id="m-gateway">Idle</div></div><div class="sdot"></div></div>
+      <div class="farrow" id="a3"></div>
+      <div class="fnode" id="node-lambda"><span class="icon">⚡</span><div class="info"><div class="lbl">Lambda <small style="font-weight:400;font-size:9px">Node.js 20.x</small></div><div class="msg" id="m-lambda">Idle</div></div><div class="sdot"></div></div>
+      <div class="farrow" id="a4"></div>
+      <div class="frow">
+        <div class="fnode" id="node-dynamo"><span class="icon">🗄</span><div class="info"><div class="lbl">DynamoDB</div><div class="msg" id="m-dynamo">Idle</div></div><div class="sdot"></div></div>
+        <div class="fnode" id="node-secrets"><span class="icon">🔐</span><div class="info"><div class="lbl">Secrets Mgr</div><div class="msg" id="m-secrets">Idle</div></div><div class="sdot"></div></div>
+      </div>
+      <div class="farrow" id="a5"></div>
+      <div class="fnode" id="node-backend"><span class="icon">🏦</span><div class="info"><div class="lbl">Card Backend</div><div class="msg" id="m-backend">Idle</div></div><div class="sdot"></div></div>
+      <div class="farrow" id="a6"></div>
+      <div class="fnode" id="node-connect" style="opacity:.3;border-color:var(--orange)">
+        <span class="icon">☁️</span>
+        <div class="info">
+          <div class="lbl" style="color:var(--orange)">Amazon Connect <small style="font-weight:400;font-size:9px;color:var(--muted)">existing</small></div>
+          <div class="msg" id="m-connect">Standby — warm handoff only</div>
+        </div>
+        <div class="sdot"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- AGENTS + STATS -->
+  <div class="panel side-panel">
+    <div class="panel-title">AI Agent Team</div>
+
+    <div class="acard" id="ac-ARCHITECT">
+      <div class="ahead"><div class="arole">ARCHITECT</div><div class="aind"></div></div>
+      <div class="amsg" id="am-ARCHITECT">Monitoring Twilio → AWS bridge</div>
+    </div>
+    <div class="acard" id="ac-SECURITY">
+      <div class="ahead"><div class="arole">SECURITY</div><div class="aind"></div></div>
+      <div class="amsg" id="am-SECURITY">Enforcing PCI-DSS compliance</div>
+    </div>
+    <div class="acard" id="ac-DEVELOPER">
+      <div class="ahead"><div class="arole">DEVELOPER</div><div class="aind"></div></div>
+      <div class="amsg" id="am-DEVELOPER">Lambda on standby — Node.js 20.x</div>
+    </div>
+    <div class="acard" id="ac-INTEGRATOR">
+      <div class="ahead"><div class="arole">INTEGRATOR</div><div class="aind"></div></div>
+      <div class="amsg" id="am-INTEGRATOR">Connect warm handoff on standby</div>
+    </div>
+
+    <div class="stats-box">
+      <div class="panel-title" style="margin-bottom:8px">Session Stats</div>
+      <div class="stats-grid">
+        <div class="sitem"><div class="sval" id="s-deflected">0</div><div class="slbl">Deflected</div></div>
+        <div class="sitem"><div class="sval" id="s-handoffs" style="color:var(--orange)">0</div><div class="slbl">Handoffs</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- LOG -->
+<div class="log-bar">
+  <div class="log-head"><span class="lock">🔒</span> Security Audit Log <span style="margin-left:auto;font-weight:400;font-size:9px">Zero PII · PCI-DSS</span></div>
+  <div id="log-entries"><div class="ll"><span class="lmsg" style="color:var(--muted)">Awaiting call…</span></div></div>
+</div>
+
+<div id="dtmf-flash"></div>
+<div id="banner"></div>
+
+<script>
+let scenario = "happy";
+let timerSec = 0, timerInt = null;
+
+// Scenario tabs
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  scenario = t.dataset.s;
+}));
+
+function startDemo() {
+  const btn = document.getElementById("start-btn");
+  btn.disabled = true; btn.textContent = "Running…";
+  resetAll();
+  const src = new EventSource(`/demo/stream?scenario=${scenario}`);
+  src.onmessage = e => handle(JSON.parse(e.data));
+  src.onerror = () => src.close();
+}
+
+function handle(ev) {
+  const arrows = { twilio:"a1", gateway:"a2", lambda:"a3", dynamo:"a4", secrets:"a4", backend:"a5", connect:"a6" };
+  switch(ev.type) {
+    case "call_start":
+      setDot("ringing", "Incoming Call");
+      document.getElementById("cid").textContent = ev.from;
+      log("INFO", `Call initiated — ${ev.callSid}`);
+      startTimer(); break;
+    case "step":
+      setNode(ev.node, ev.status, ev.message);
+      if (arrows[ev.node] && ev.status === "active") litArrow(arrows[ev.node]);
+      if (ev.node === "caller" && ev.status === "active") setDot("active","Connected");
+      if (ev.node === "caller" && ev.status === "success") { setDot("done","Call Ended"); stopTimer(); }
+      break;
+    case "audio":   addLine("ivr-line",  `IVR: "${ev.text}"`); break;
+    case "dtmf":    flashKey(ev.digit); addLine("dtmf-line", `Pressed: ${ev.digit}`); break;
+    case "security": log(ev.level, ev.message); break;
+    case "agent":   setAgent(ev.agent, ev.status, ev.message); break;
+    case "deflected":
+      fetch("/stats/deflected", {method:"POST"}).then(r=>r.json()).then(updateStats);
+      showBanner("deflected", "✓ Call Deflected — Connect Not Reached"); break;
+    case "handoff":
+      fetch("/stats/handoff", {method:"POST"}).then(r=>r.json()).then(updateStats);
+      showBanner("handoff", "→ Warm Handoff — Agent Has Full Context"); break;
+    case "complete":
+      document.getElementById("start-btn").disabled = false;
+      document.getElementById("start-btn").textContent = "▶ Run Again"; break;
+  }
+}
+
+function setNode(id, status, msg) {
+  const el = document.getElementById("node-"+id); if(!el) return;
+  // preserve connect orange styling
+  if (id === "connect") {
+    el.style.opacity = "1";
+    el.className = "fnode " + status;
+    el.style.borderColor = status === "success" || status === "active" ? "var(--orange)" : "var(--orange)";
+    el.querySelector(".lbl").style.color = "var(--orange)";
+  } else {
+    el.className = "fnode " + status;
+  }
+  const m = document.getElementById("m-"+id); if(m && msg) m.textContent = msg;
+}
+function litArrow(id) { document.getElementById(id)?.classList.add("lit"); }
+function setDot(state, label) {
+  document.getElementById("dot").className = "dot "+state;
+  document.getElementById("clabel").textContent = label;
+}
+function setAgent(agent, status, msg) {
+  const c = document.getElementById("ac-"+agent); if(!c) return;
+  c.className = "acard " + (status === "done" ? "done" : "active");
+  const m = document.getElementById("am-"+agent); if(m) m.textContent = msg;
+}
+function addLine(cls, text) {
+  const t = document.getElementById("transcript");
+  if (t.querySelector("span")) t.innerHTML = "";
+  const d = document.createElement("div"); d.className = cls+" fu"; d.textContent = text;
+  t.appendChild(d); t.scrollTop = t.scrollHeight;
+}
+function log(level, msg) {
+  const c = document.getElementById("log-entries");
+  const ts = new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  const d = document.createElement("div"); d.className = "ll fu";
+  d.innerHTML = `<span class="lts">${ts}</span><span class="lv-${level}">[${level}]</span><span class="lmsg">${msg}</span>`;
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function flashKey(digit) {
+  const f = document.getElementById("dtmf-flash"); f.textContent = digit; f.style.opacity = "1";
+  const k = document.getElementById("key-"+digit); k?.classList.add("pressed");
+  setTimeout(() => { f.style.opacity="0"; k?.classList.remove("pressed"); }, 600);
+}
+function showBanner(cls, txt) {
+  const b = document.getElementById("banner"); b.className = cls; b.textContent = txt; b.style.display = "block";
+  setTimeout(() => b.style.display = "none", 4000);
+}
+function updateStats(s) {
+  document.getElementById("s-deflected").textContent = s.deflected;
+  document.getElementById("s-handoffs").textContent  = s.handoffs;
+  document.getElementById("h-deflected").textContent = s.deflected;
+  document.getElementById("h-handoffs").textContent  = s.handoffs;
+}
+function startTimer() {
+  timerSec = 0;
+  timerInt = setInterval(() => {
+    timerSec++;
+    const m = String(Math.floor(timerSec/60)).padStart(2,"0");
+    const s = String(timerSec%60).padStart(2,"0");
+    document.getElementById("ctimer").textContent = `${m}:${s}`;
+  }, 1000);
+}
+function stopTimer() { clearInterval(timerInt); }
+function resetAll() {
+  ["caller","twilio","gateway","lambda","dynamo","secrets","backend"].forEach(id => setNode(id,"","Idle"));
+  const c = document.getElementById("node-connect");
+  c.className = "fnode"; c.style.opacity = ".3"; c.style.borderColor = "var(--orange)";
+  c.querySelector(".lbl").style.color = "var(--orange)";
+  document.getElementById("m-connect").textContent = "Standby — warm handoff only";
+  ["a1","a2","a3","a4","a5","a6"].forEach(id => document.getElementById(id)?.classList.remove("lit"));
+  ["ARCHITECT","SECURITY","DEVELOPER","INTEGRATOR"].forEach(a => document.getElementById("ac-"+a).className = "acard");
+  document.getElementById("transcript").innerHTML = "";
+  document.getElementById("ctimer").textContent = "─";
+  document.getElementById("log-entries").innerHTML = "";
+  setDot("","Connecting…");
+}
+// load initial stats
+fetch("/stats").then(r=>r.json()).then(updateStats).catch(()=>{});
+</script>
+</body>
+</html>

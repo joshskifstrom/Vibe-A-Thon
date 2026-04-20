@@ -166,9 +166,9 @@ main{display:grid;grid-template-columns:220px 1fr 220px;gap:12px;padding:12px;fl
           <div class="call-badge"><div class="dot" id="dot"></div><span id="clabel">Ready</span></div>
           <div class="cid" id="cid">+1 (512) 867-5309</div>
           <div class="ctimer" id="ctimer">─</div>
-          <div class="transcript" id="transcript"><span class="sys-line">Select a scenario and press Start.</span></div>
+          <div class="transcript" id="transcript"><span class="sys-line" style="color:var(--muted)">Select a scenario and press Start.</span></div>
         </div>
-        <div class="kpad">
+        <div class="kpad" style="display:none">
           <div class="key" id="key-1">1</div><div class="key">2</div><div class="key">3</div>
           <div class="key">4</div><div class="key">5</div><div class="key">6</div>
           <div class="key">7</div><div class="key">8</div><div class="key">9</div>
@@ -321,7 +321,7 @@ function handle(ev) {
 let callerSpeechEl = null;
 function appendCallerWord(word, final) {
   const t = document.getElementById("transcript");
-  if (t.querySelector("span")) t.innerHTML = "";
+  if (t.querySelector("span.sys-line")) t.innerHTML = "";
   if (!callerSpeechEl) {
     callerSpeechEl = document.createElement("div");
     callerSpeechEl.className = "caller-line fu";
@@ -372,7 +372,7 @@ function setAgent(agent, status, msg) {
 }
 function addLine(cls, text) {
   const t = document.getElementById("transcript");
-  if (t.querySelector("span")) t.innerHTML = "";
+  if (t.querySelector("span.sys-line")) t.innerHTML = "";
   const d = document.createElement("div"); d.className = cls+" fu"; d.textContent = text;
   t.appendChild(d); t.scrollTop = t.scrollHeight;
 }

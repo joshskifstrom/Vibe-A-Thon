@@ -3,7 +3,7 @@ const sid = () => "CA" + Math.random().toString(36).slice(2, 14).toUpperCase();
 // Caller's opening sentence broken into word-by-word chunks for live transcript effect
 const CALLER_PHRASE = [
   "Hey,", "I", "think", "I", "left", "my", "card",
-  "at", "a", "gas", "station", "and", "I'm", "panicking."
+  "at", "a", "restaurant", "and", "I'm", "panicking."
 ];
 
 export function getIntelligentFlowScript() {
@@ -19,6 +19,7 @@ export function getIntelligentFlowScript() {
     [0,    { type: "call_start", callSid, from: "+1 (512) 867-5309" }],
     [700,  { type: "step", node: "caller",        status: "active",  message: "Call connected" }],
     [1100, { type: "step", node: "twilio",        status: "active",  message: "Studio flow — <Start><Stream> to Conversation Intelligence" }],
+    [1300, { type: "audio", speaker: "IVR",       text: "Welcome to Intuit Card Services. How can I help you today?" }],
 
     // Intelligence engine spins up while caller begins speaking
     [1400, { type: "step", node: "intelligence",  status: "active",  message: "Streaming audio — Language Operators listening…" }],
